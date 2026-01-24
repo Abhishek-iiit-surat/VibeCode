@@ -72,6 +72,39 @@ Please apply the requested changes and return the complete modified file."""
     # Return both original and edited content so we can generate diffs
     return file_content, edited_content 
 
+def refine_edits_based_on_error(file_path, original_prompt, previous_edit, execution_result):
+    """                                              
+      Call LLM again with error context to fix the     
+      code.                                                
+    """
+
+    error_prompt = f"""You previously edited this    
+        code based on: "{original_prompt}"                   
+                                                            
+        Your previous edit:                                  
+        {previous_edit}                                      
+                                                            
+        But when we ran it, we got this error:               
+        Exit Code: {execution_result.exit_code}              
+        Error Output:                                        
+        {execution_result.stderr}                            
+                                                            
+        Please fix the code so it runs without errors. Return
+        the complete corrected file."""                     
+                                                            
+      messages = [                                     
+          {"role": "system", "content": "You are an expert code debugger. Fix the errors in the code."}, 
+          {"role": "user", "content": error_prompt}    
+      ]                                                
+                                                       
+      response = client.chat.completions.create(       
+          model="gpt-4o-mini",                         
+          temperature=0.7,                             
+          messages=messages                            
+      )                                                
+                                                       
+      return response.choices[0].message.content
+
 
 
 
