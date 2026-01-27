@@ -22,19 +22,11 @@ def sanitize_file_path(file_path):
         print(f"Error validating file path: {e}")
         return None, False
 
-def plan_edits(file_path, user_prompt):
+def plan_edits(file_content, user_prompt):
     """
-    Reads a file and sends it to OpenAI with a user prompt.
+    sends file content it OpenAI with a user prompt.
     Returns: (original_content, edited_content) tuple
     """
-    # Validate and read the file
-    validated_path, file_exists = sanitize_file_path(file_path)
-
-    if not file_exists:
-        raise FileNotFoundError(f"File not found: {file_path}")
-
-    with open(validated_path, 'r') as f:
-        file_content = f.read()
 
     system_prompt = """You are an expert code editor. Your task is to modify code based on user instructions.
 IMPORTANT RULES:
@@ -47,8 +39,6 @@ IMPORTANT RULES:
 7. Start with the first line of code, end with the last line of code"""
 
     prompt = f"""Task: {user_prompt}
-
-File: {validated_path}
 
 Current code:
 {file_content}
@@ -74,7 +64,7 @@ RETURN ONLY THE MODIFIED PYTHON CODE. NO MARKDOWN. NO EXPLANATIONS. JUST THE COD
     edited_content = strip_markdown_code_blocks(edited_content)
 
     # Return both original and edited content so we can generate diffs
-    return file_content, edited_content
+    return edited_content
 
 
 def strip_markdown_code_blocks(text: str) -> str:
