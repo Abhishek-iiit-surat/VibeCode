@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from agent.planner import plan_edits, refine_edits_based_on_error
 from execution.manager import execute_code, compile_script
 from storage.agentfs_manager import AgentFSManager
+from src.utils import read_file_content, validate_file_path
 
 @dataclass
 class Iteration:
@@ -48,10 +49,9 @@ async def edit_with_validation(file_path: str, user_prompt: str, agent_fs_manage
     last_error = None  # Track the last error (could be compilation or execution)
 
     for i in range(0, max_iteration):
-        # Step 1: Get edited content from LLM
         if i == 0:
-            # First iteration: get initial edit from LLM using user_prompt
-            original_content, edited_content = plan_edits(file_path, user_prompt)
+            original_content = read_file_content(file_path)
+            edited_content = plan_edits(original_content, user_prompt)
             print(f"🔄 Iteration {i+1}: Initial edit from LLM based on prompt")
         else:
             # Subsequent iterations: LLM refines based on previous edit + error
@@ -75,7 +75,7 @@ async def edit_with_validation(file_path: str, user_prompt: str, agent_fs_manage
         compilation_result = compile_script(sandbox_path)
 
         if compilation_result.success:
-            # ✅ Compilation passed! Now try to execute
+            # Compilation passed! Now try to execute
             # Step 4: Execute the sandbox file (runtime check)
             execution_result = execute_code(sandbox_path)
 

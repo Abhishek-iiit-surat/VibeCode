@@ -2,7 +2,7 @@
 
 import pathlib
 
-def sanitize_file_path(file_path):
+def validate_file_path(file_path):
     """
     Validate that the file path exists and is readable.
     Returns: (absolute_path, exists) tuple
@@ -16,3 +16,22 @@ def sanitize_file_path(file_path):
     except Exception as e:
         print(f"Error validating file path: {e}")
         return None, False
+
+
+def read_file_content(file_path):
+    """
+    Read and return the content of a file.
+    Args:
+        file_path (str): Path to the file
+    Returns:
+        str: Content of the file
+    Raises:
+        FileNotFoundError: If the file does not exist
+        IOError: If the file cannot be read
+    """
+    print(f"📰 Reading file content from {file_path}")
+    with open(file_path, 'r') as f:
+        content = f.read()
+
+    return content
+
