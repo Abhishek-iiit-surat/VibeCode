@@ -16,7 +16,7 @@ def apply_changes(file_path, edited_content):
         bool: True if successful, False otherwise
 
     Raises:
-        IOError: If file cannot be written
+        IOError: If file cant write in file
     """
     try:
         with open(file_path, 'w') as f:
