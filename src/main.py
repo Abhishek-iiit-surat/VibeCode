@@ -13,7 +13,7 @@ from agent.planner import plan_edits
 from diff.generator import generate_diff
 from agent.editor import apply_changes, apply_sandbox_to_real_file
 from ui.display import show_diff, get_approval
-from agent.feedback import edit_with_validation
+from agent.feedback import edit_with_validation, smart_edit
 from storage.agentfs_manager import AgentFSManager
 from ui.display import show_execution_result, show_iteration_summary
 
@@ -158,8 +158,8 @@ async def process_single_edit(filepath, prompt, agentfs_manager):
     click.echo("🔄 Running code through AI feedback loop...\n")
 
     try:
-        # Run edit with validation (up to 5 iterations)
-        result = await edit_with_validation(str(file_path_obj), prompt, agentfs_manager, max_iteration=5)
+        # smart_edit auto-routes: small files → whole-file, large files → chunked
+        result = await smart_edit(str(file_path_obj), prompt, agentfs_manager, max_iteration=5)
 
         # Show iteration summary if there were iterations
         if result.iterations:
