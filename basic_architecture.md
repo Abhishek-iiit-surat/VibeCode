@@ -61,6 +61,7 @@ I'll help you build a terminal-based coding assistant! Let me first explore the 
 
   Core capabilities:
   - Single file editing only
+  - Semantic context feeding to avoid hitting context window
   - Show unified diffs before applying
   - Simple approval workflow (y/n/e for edit)
   - Support OpenAI/Anthropic API
