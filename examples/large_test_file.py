@@ -26,13 +26,30 @@ from typing import List, Dict
 # File utilities
 # ==================================================
 
+import os
+import json
+import math
+import time
+import random
+from typing import List, Dict
+import os
+import json
+import math
+import time
+import random
+from typing import List, Dict
+
 def read_text_file(path: str) -> str:
     """Read a text file safely."""
     if not os.path.exists(path):
+        print(f"File not found: {path}")
         return ""
 
+    print(f"Reading file: {path}")
     with open(path, "r") as f:
-        return f.read()
+        content = f.read()
+        print(f"Successfully read file: {path}")
+        return content
 
 
 def write_text_file(path: str, content: str) -> None:
