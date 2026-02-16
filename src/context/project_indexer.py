@@ -37,6 +37,7 @@ class FileInfo:
     file_type: FileType = FileType.MODULE
     line_count: int = 0
     mtime: float = 0.0                     # Last modification timestamp
+    export_descriptions: Dict[str, str] = field(default_factory=dict)  # {'function_name': 'docstring summary'}
 
 
 @dataclass
@@ -165,6 +166,9 @@ class ProjectIndexer:
             # Extract exports (top-level functions and classes)
             exports = self._extract_exports(tree)
 
+            # Extract export descriptions (docstrings)
+            export_descriptions = self._extract_export_descriptions(tree)
+
             # Classify file type
             file_type = self._classify_file(filepath, tree)
 
@@ -181,6 +185,7 @@ class ProjectIndexer:
                 exports=exports,
                 file_type=file_type,
                 line_count=line_count,
+                export_descriptions=export_descriptions,
                 mtime=mtime
             )
 
@@ -241,6 +246,43 @@ class ProjectIndexer:
                     exports.add(node.name)
 
         return sorted(list(exports))
+
+    def _extract_export_descriptions(self, tree: ast.AST) -> Dict[str, str]:
+        """
+        Extract docstrings for top-level exports (functions, classes).
+
+        This provides high-level descriptions of what each exported function/class does,
+        which helps the LLM understand the purpose of each file.
+
+        Args:
+            tree: Parsed AST
+
+        Returns:
+            Dict mapping export name to its docstring summary
+            Example: {'smart_edit': 'Routes to chunked or whole-file editing based on size'}
+        """
+        descriptions = {}
+
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                # Skip private exports
+                if node.name.startswith("_"):
+                    continue
+
+                # Get docstring
+                docstring = ast.get_docstring(node)
+                if docstring:
+                    # Take first line only (summary)
+                    summary = docstring.split('\n')[0].strip()
+                    # Limit length to keep context manageable
+                    if len(summary) > 100:
+                        summary = summary[:97] + "..."
+                    descriptions[node.name] = summary
+                else:
+                    # No docstring - indicate unknown
+                    descriptions[node.name] = "(no description)"
+
+        return descriptions
 
     def _classify_file(self, filepath: Path, tree: ast.AST) -> FileType:
         """
