@@ -60,7 +60,8 @@ class ProjectDatabase:
                 exports TEXT NOT NULL,
                 file_type TEXT NOT NULL,
                 line_count INTEGER NOT NULL,
-                mtime REAL NOT NULL
+                mtime REAL NOT NULL,
+                export_descriptions TEXT
             )
         """)
 
@@ -117,7 +118,7 @@ class ProjectDatabase:
 
         for file_info in graph.files.values():
             cursor.execute("""
-            INSERT INTO files VALUES (?,?,?,?,?,?,?)
+            INSERT INTO files VALUES (?,?,?,?,?,?,?,?)
         """, (
             file_info.filepath,
             file_info.relative_path,
@@ -125,7 +126,8 @@ class ProjectDatabase:
             json.dumps(file_info.exports),
             file_info.file_type.value,
             file_info.line_count,
-            file_info.mtime
+            file_info.mtime,
+            json.dumps(file_info.export_descriptions)
         ))
         
         # save new dependencies
@@ -161,6 +163,11 @@ class ProjectDatabase:
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM files")
         for row in cursor.fetchall():
+            # Handle export_descriptions (may not exist in old databases)
+            export_descriptions = {}
+            if 'export_descriptions' in row.keys():
+                export_descriptions = json.loads(row['export_descriptions'])
+
             file_info = FileInfo(
                 filepath=row['filepath'],
                 relative_path=row['relative_path'],
@@ -168,7 +175,8 @@ class ProjectDatabase:
                 exports=json.loads(row['exports']),
                 file_type=FileType(row['file_type']),
                 line_count=row['line_count'],
-                mtime=row['mtime']
+                mtime=row['mtime'],
+                export_descriptions=export_descriptions
             )
             graph.add_file(file_info)
 
