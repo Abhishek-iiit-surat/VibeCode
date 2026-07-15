@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-VibeCode - AI-powered code editor with automatic feedback loop
+VibeCode - an agentic coding assistant
 
 This is the entry point script that properly sets up paths and runs the CLI.
 
 Usage:
-  python run_vibe.py "Add docstrings" src/utils.py    # Single edit
-  python run_vibe.py                                   # Interactive session
+  python run_vibe.py "add a docstring to utils.py"    # Single task
+  python run_vibe.py                                   # Interactive REPL
 """
 
 import sys
@@ -19,7 +19,7 @@ src_dir = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_dir))
 
 # Import and run the CLI
-from main import main
+from vibecode.cli import cli
 
 if __name__ == '__main__':
-    main()
+    cli()

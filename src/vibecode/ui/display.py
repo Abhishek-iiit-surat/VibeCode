@@ -70,3 +70,17 @@ def show_iteration_summary(iterations):
         status = "✅" if it.success else "❌"
         click.echo(f"  Attempt {it.attempt_number}: {status} (exit code: {it.execution_result.exit_code})")
     click.echo("="*60)
+
+def show_agent_text(text):
+    """Display the agent's final response text for a turn."""
+    if text:
+        click.echo(text)
+
+def show_tool_call(name, tool_input):
+    """Display a tool call the agent is about to make."""
+    click.secho(f"→ {name}({tool_input})", fg='cyan')
+
+def show_tool_result(result):
+    """Display the result of a tool call."""
+    fg = 'red' if result.is_error else 'bright_black'
+    click.secho(result.content, fg=fg)
