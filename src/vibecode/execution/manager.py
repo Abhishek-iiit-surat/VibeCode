@@ -3,13 +3,7 @@ Execution manager that orchestrates code execution.
 Routes execution requests to appropriate executors based on file type.
 """
 
-import sys
-from pathlib import Path
-
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
-
-from python_executor import PythonExecutor, ExecutionResult, CompilationResult
+from vibecode.execution.python_executor import PythonExecutor, ExecutionResult, CompilationResult
 
 def execute_code(file_path: str) -> ExecutionResult:
     """
