@@ -7,8 +7,16 @@ __pycache__/
 env/
 venv/
 .venv/
+vibe/
+Include/
+Lib/
+Scripts/
+pyvenv.cfg
 pip-log.txt
 pip-delete-this-directory.txt
+
+# VibeCode runtime state
+.vibecode/
 
 # Environment variables
 .env
