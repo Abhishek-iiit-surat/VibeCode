@@ -78,7 +78,7 @@ def show_agent_text(text):
 
 def show_tool_call(name, tool_input):
     """Display a tool call the agent is about to make."""
-    click.secho(f"→ {name}({tool_input})", fg='cyan')
+    click.secho(f"-> {name}({tool_input})", fg='cyan')
 
 def show_tool_result(result):
     """Display the result of a tool call."""

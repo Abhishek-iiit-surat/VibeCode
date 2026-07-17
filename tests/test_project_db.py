@@ -8,14 +8,14 @@ import shutil
 from pathlib import Path
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from src.context import incremental_index
+from vibecode.context import incremental_index
 
 
 def main():
-    project_root = str(Path(__file__).parent)
-    db_path = ".vibe/project.db"
+    project_root = str(Path(__file__).parent.parent)
+    db_path = ".vibecode/project.db"
 
     # Clean up old database if it exists
     db_file = Path(project_root) / db_path
@@ -61,7 +61,7 @@ def main():
     print("=" * 70)
 
     # Touch a file to change its mtime
-    test_file = Path(project_root) / "test_indexer.py"
+    test_file = Path(__file__)
     if test_file.exists():
         print(f"📝 Touching file: {test_file.name}")
         test_file.touch()

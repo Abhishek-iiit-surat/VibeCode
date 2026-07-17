@@ -1,358 +1,176 @@
 # VibeCode Usage Guide
 
-VibeCode is an AI-powered code editor that uses LLM feedback loops to fix and improve your code automatically.
+VibeCode is an agentic coding CLI: you give it a free-form task, and its reasoning
+loop decides which tools to call — reading files, writing files (with your approval),
+running shell commands, searching the web, or delegating a subtask to a sub-agent —
+until the task is done.
 
 ## Installation
 
 ```bash
-# Install dependencies
 pip install -r requirements.txt
+cp .env.example .env   # then edit .env and set ANTHROPIC_API_KEY
 ```
 
 ## Two Usage Modes
 
-### Mode 1: Single Edit (Quick Mode)
+### Mode 1: Single Task
 
-For quick, one-off edits:
+For a one-off task:
 
 ```bash
-python src/main.py "Add error handling" src/utils.py
+python run_vibe.py "add error handling to src/utils.py"
 ```
 
 **What happens:**
-1. ✅ AgentFS sandbox initializes
-2. 🔄 LLM edits the file (up to 5 iterations with feedback)
-3. 📝 Shows diff and asks for approval
-4. ✨ Applies changes (if approved)
-5. 🧹 Cleans up and exits
+1. 🧠 Context loads (`CLAUDE.md` + any `skills/*/SKILL.md`) into the system prompt
+2. 🔄 The agent reasons and calls tools as needed (file_read, file_write, bash,
+   web_search, or Task to delegate)
+3. 📝 Any file write shows a diff and asks for approval before it lands on disk
+4. ✅ The agent reports back when the task is done
 
-**Best for:** Single file modifications
+**Best for:** A single well-scoped task.
 
 ---
 
-### Mode 2: Interactive Session (Full Session)
+### Mode 2: Interactive REPL
 
-For working on multiple files:
+For working across multiple tasks in one session, with context and memory shared:
 
 ```bash
-python src/main.py
+python run_vibe.py
 ```
 
 **What happens:**
-1. ✅ AgentFS sandbox initializes ONCE for the entire session
-2. 📝 Prompts: "Enter prompt (or 'quit'/'exit' to exit)"
-3. 📁 Prompts: "Enter filepath"
-4. 🔄 LLM edits the file (up to 5 iterations)
-5. 📝 Shows diff and asks for approval
-6. ✨ Applies changes (if approved)
-7. ❓ Asks: "Would you like to edit another file?"
-8. 🔄 Repeat steps 2-7 OR exit
-9. 🧹 Cleans up sandbox and exits
+1. 🧠 Context and Memory load once for the whole process
+2. 📝 Prompts: `›` — type a task, or `quit`/`exit` to leave
+3. 🔄 The agent runs its reasoning loop for that task
+4. 🔁 Repeat — memory persists across tasks in the same run
 
-**Best for:** Editing multiple files in one session
+**Best for:** Iterating on a project across several requests without losing context.
 
 ---
 
 ## Interactive Session Example
 
 ```
-🤖 VibeCode Interactive Session Mode
-💡 Tip: Type 'quit' or press CTRL+C to exit
+VibeCode — describe a task, or 'quit' to exit.
+› add a docstring to src/utils.py
 
-============================================================
-📝 Enter prompt (or 'quit'/'exit' to exit): Add error handling to file
-📁 Enter filepath: src/main.py
-
-🔄 Running code through AI feedback loop...
-
-============================================================
-ITERATION SUMMARY
-============================================================
-  Attempt 1: ❌ (exit code: 1)
-  Attempt 2: ✅ (exit code: 0)
-============================================================
-
-📝 Here's what will change:
-
---- src/main.py (original)
-+++ src/main.py (edited)
-@@ -1,5 +1,10 @@
-+try:
-     def process_data(x):
-         return x * 2
-+except Exception as e:
-+    print(f"Error: {e}")
-
-✅ Iteration 2: Success!
-Output:
-Process data result: 42
-
-============================================================
+-> file_read({'path': 'src/utils.py'})
+--- src/utils.py (original)
++++ src/utils.py (edited)
+@@ -1,3 +1,4 @@
++"""Utility helpers for the project."""
+ def helper():
+     return 42
 Apply changes? (y)es / (n)o / (e)dit: y
+Wrote src/utils.py.
 
-⏳ Applying changes to real file...
+Done — added a module docstring to src/utils.py.
 
-✨ Changes applied successfully!
-
-Would you like to edit another file? [y/N]: y
-
-============================================================
-📝 Enter prompt (or 'quit'/'exit' to exit): Fix imports
-📁 Enter filepath: src/config.py
-
-🔄 Running code through AI feedback loop...
-
-[... Same process for second file ...]
-
-Would you like to edit another file? [y/N]: n
-
-👋 Ending interactive session...
-
-⏳ Cleaning up sandbox...
-✅ Session ended gracefully
+› quit
 ```
 
 ---
 
-## Exit Commands
+## The FileWrite Diff/Approval Gate
 
-You can exit an interactive session in three ways:
+Every write goes through the `file_write` tool, which is intrinsic to the tool
+itself — not something that can be turned off by removing a hook:
 
-### Option 1: Type 'quit'
-```
-📝 Enter prompt (or 'quit'/'exit' to exit): quit
-👋 Ending interactive session...
-```
+- **(y)es** — writes the file, applying the shown diff.
+- **(n)o** — declines; the file is left untouched and the agent is told the write
+  was declined so it doesn't retry blindly.
+- **(e)dit** — tells the agent you'll edit the file yourself instead.
 
-### Option 2: Type 'exit'
-```
-📝 Enter prompt (or 'quit'/'exit' to exit): exit
-👋 Ending interactive session...
-```
+## Hooks
 
-### Option 3: Press CTRL+C
-```
-[... editing ...]
-^C
-👋 Session ended (CTRL+C). Goodbye!
-```
+Two hooks are wired in by default around every tool call:
 
----
+- **LoggingHook** — appends a JSON line per tool call to
+  `.vibecode/logs/tool_calls.jsonl` (never blocks).
+- **BashConfirmationHook** — before running any `bash` command, shows it and asks
+  for confirmation; declining blocks the call.
 
-## Understanding the Feedback Loop
+## Sub-Agents and the Task Tool
 
-VibeCode automatically fixes errors through AI iteration:
+The agent can delegate work via the `Task` tool:
+- `subagent_type="large-file-editor"` — for a single file over ~200 lines. Instead
+  of rewriting the whole file, it parses the file into AST blocks, edits just the
+  relevant chunk, merges it back, and validates the merge against a temporary copy
+  before the usual diff+approval gate.
+- `subagent_type="general-purpose"` — a nested reasoning loop with a restricted tool
+  set (`file_read`, `file_write`, `bash`, `web_search` — no further delegation, no
+  shared memory) for any other self-contained subtask.
 
-### ❌ Iteration 1 - Compilation Fails
-```
-LLM tries to fix syntax error:
-  def hello()
-      print('hi')
+## Memory
 
-Error: SyntaxError: invalid syntax
-```
-
-### ✅ Iteration 2 - Fixed!
-```
-LLM sees the error and fixes the colon:
-  def hello():
-      print('hi')
-
-Success! Code compiled and executed.
-```
-
-**Key insight:** The LLM gets smarter with each iteration because it sees:
-- What it tried before (previous edit)
-- What went wrong (error message)
-- What the goal was (your original prompt)
-
----
-
-## Approval Workflow
-
-After VibeCode generates changes, you have three options:
-
-### (y)es - Apply Changes
-```
-Apply changes? (y)es / (n)o / (e)dit: y
-
-⏳ Applying changes to real file...
-
-✨ Changes applied successfully!
-```
-
-The edited code from the AgentFS sandbox is written to your real file.
-
-### (n)o - Discard Changes
-```
-Apply changes? (y)es / (n)o / (e)dit: n
-
-❌ Changes discarded.
-```
-
-Your original file is unchanged. The sandbox is discarded.
-
-### (e)dit - Edit Manually (Not Yet Implemented)
-```
-Apply changes? (y)es / (n)o / (e)dit: e
-
-💡 Edit mode not implemented yet.
-   (You can manually edit the file and run vibe again)
-```
-
----
-
-## Important Notes
-
-### ✅ Files Are Safe
-- All changes happen in AgentFS sandbox FIRST
-- Your real files are ONLY modified after you approve
-- You can always reject changes
-
-### ⏳ Multiple Iterations
-- VibeCode tries up to 5 times to fix errors
-- Each iteration, the LLM gets feedback
-- It stops early if code succeeds
-
-### 🧹 Session Cleanup
-- AgentFS sandbox is automatically cleaned up
-- Works with both `quit` command and CTRL+C
-- No leftover files or resources
-
----
-
-## Example Use Cases
-
-### Adding Error Handling
-```
-python src/main.py "Add try-except error handling" src/api.py
-```
-
-### Fixing Syntax Errors
-```
-python src/main.py "Fix all syntax errors" src/broken_code.py
-```
-
-### Adding Docstrings
-```
-python src/main.py "Add docstrings to all functions" src/utils.py
-```
-
-### Refactoring
-```
-python src/main.py "Refactor to use list comprehension where possible" src/data.py
-```
-
-### Adding Logging
-```
-python src/main.py "Add logging statements for debugging" src/worker.py
-```
-
----
-
-## Troubleshooting
-
-### FileNotFoundError
-```
-❌ Error: File not found: src/missing.py
-```
-**Solution:** Make sure the filepath is correct and the file exists.
-
-### AgentFS Error
-```
-❌ Error: AgentFS initialization failed
-```
-**Solution:**
-1. Check that `agentfs-sdk` is installed: `pip install agentfs-sdk`
-2. Ensure you have write permissions in the current directory
-
-### LLM Rate Limit
-```
-❌ Unexpected error: Rate limit exceeded
-```
-**Solution:** Wait a few seconds and try again.
-
-### CTRL+C Not Responsive
-Sometimes CTRL+C is ignored if async operations are blocking:
-```
-press CTRL+C twice
-or wait for current iteration to complete
-```
-
----
+`.vibecode/memory.json` holds the conversation across turns in a session. Once the
+serialized history passes a size threshold, the oldest messages are summarized in
+one extra Claude call and replaced with a single summary entry, keeping the most
+recent messages verbatim — so long-running sessions don't grow unbounded.
 
 ## Configuration
 
-### API Keys
-
-VibeCode uses OpenAI's API (via GPT-4 mini). Set your API key in `.env`:
+### API Key
 
 ```bash
-# .env file
-OPENAI_API_KEY=sk-your-key-here
+# .env
+ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
-### Iteration Count
+### Model
 
-To change max iterations (default: 5), edit `src/main.py`:
+Default is `claude-opus-4-8`. Override per-invocation:
 
-```python
-# Line 160: max_iteration=5  # Change this number
-result = await edit_with_validation(str(file_path_obj), prompt, agentfs_manager, max_iteration=10)
+```bash
+python run_vibe.py --model claude-sonnet-5 "summarize the README"
 ```
-
----
-
-## Performance Tips
-
-1. **Keep files under 1000 lines** - LLM works better with smaller files
-2. **Be specific in prompts** - "Add error handling for file operations" is better than "Fix my code"
-3. **Use single edit mode for quick fixes** - Faster than interactive session for one file
-4. **Reuse interactive session** - Avoids re-initializing AgentFS for multiple files
 
 ---
 
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────┐
-│ main.py - CLI Interface                 │
-│  - Single edit mode                     │
-│  - Interactive session mode (while loop)│
-└──────────────┬──────────────────────────┘
-               │
-               ├─→ agentfs_manager.py ──→ AgentFS Sandbox
-               │
-               ├─→ feedback.py (Iteration Loop)
-               │    ├─→ planner.py ──→ OpenAI LLM
-               │    ├─→ execution/ ──→ python_executor.py
-               │    └─→ storage/ ──→ AgentFS write
-               │
-               ├─→ diff/generator.py ──→ unified diff
-               │
-               └─→ ui/display.py ──→ Terminal colors
+You ──task──▶ Agent (Reasoning Loop) ──call──▶ Hooks ──▶ Tools
+                  │      ▲                              (FileRead, FileWrite,
+        delegate  │      │ results                       Bash, WebSearch)
+      subtasks    ▼      │
+              Sub-Agents ┘
+                  │
+      on startup  │             read/write
+                  ▼             context
+              Context ◀──────────────────────▶ Memory
+          (CLAUDE.md, skills/)          (.vibecode/memory.json,
+                                          auto-compacts when full)
 ```
 
----
+- `src/vibecode/agent/` — reasoning loop, Anthropic client, system prompt assembly
+- `src/vibecode/tools/` — FileRead, FileWrite, Bash (client-side) + WebSearch
+  (Anthropic server-side tool)
+- `src/vibecode/hooks/` — pre/post tool-call interception
+- `src/vibecode/subagents/` — Task tool, generic sub-agent runner, large-file-editor
+- `src/vibecode/context/` — CLAUDE.md/skills loader, plus project indexing utilities
+  (AST analyzer, project graph, SQLite index)
+- `src/vibecode/memory/` — persistent session memory with compaction
+- `src/vibecode/diff/`, `src/vibecode/ui/` — diff generation and terminal display
 
-## Next Steps
+## Troubleshooting
 
-1. **Test with a simple file:**
-   ```bash
-   echo 'print("hello"' > test.py
-   python src/main.py "Fix syntax error" test.py
-   ```
+### `ANTHROPIC_API_KEY is not set`
+Copy `.env.example` to `.env` and add your key.
 
-2. **Try interactive session:**
-   ```bash
-   python src/main.py
-   ```
+### FileNotFoundError from `file_read`
+The agent will report the missing path back to itself and usually recover by
+asking you or trying a different path — check the path you gave it in your task.
 
-3. **Edit multiple files:**
-   - Enter first prompt + file
-   - Review and apply
-   - Say 'y' to continue
-   - Edit second file
-   - Type 'quit' to exit
+### Declined a write by mistake
+Just describe the task again; nothing was written to disk.
 
-Happy coding! 🚀
+## Running Tests
+
+```bash
+pip install pytest
+pytest tests/
+```

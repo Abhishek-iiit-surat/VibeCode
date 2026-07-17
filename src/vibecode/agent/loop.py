@@ -14,6 +14,7 @@ import anthropic
 from vibecode.agent.client import DEFAULT_MODEL
 from vibecode.tools.base import ToolResult
 from vibecode.tools.registry import ToolRegistry
+from vibecode.ui.display import show_tool_call, show_tool_result
 
 
 @dataclass
@@ -55,6 +56,8 @@ def run_agent_loop(
                 continue  # server-tool blocks (web_search) are already resolved in-response
 
             tool_input = block.input
+            show_tool_call(block.name, tool_input)
+
             if hooks is not None:
                 decision = hooks.before_tool_call(block.name, tool_input)
                 if decision.block:
@@ -64,6 +67,8 @@ def run_agent_loop(
                     result = hooks.after_tool_call(block.name, tool_input, result) or result
             else:
                 result = tools.execute(block.name, tool_input)
+
+            show_tool_result(result)
 
             tool_results.append(
                 {

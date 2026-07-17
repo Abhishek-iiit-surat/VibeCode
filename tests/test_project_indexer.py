@@ -7,12 +7,12 @@ import sys
 from pathlib import Path
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from src.context import ProjectIndexer
+from vibecode.context import ProjectIndexer
 
 def main():
-    project_root = Path(__file__).parent
+    project_root = Path(__file__).parent.parent
     print(f"Scanning project: {project_root}")
 
     indexer = ProjectIndexer(str(project_root))
