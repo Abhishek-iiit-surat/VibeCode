@@ -4,20 +4,13 @@ import click
 
 from vibecode.agent.client import DEFAULT_MODEL, get_client
 from vibecode.agent.loop import run_agent_loop
+from vibecode.agent.system_prompt import build_system_prompt
+from vibecode.context.loader import load_project_context
 from vibecode.hooks import HookManager
 from vibecode.hooks.bash_confirmation_hook import BashConfirmationHook
 from vibecode.hooks.logging_hook import LoggingHook
 from vibecode.tools import build_default_registry
 from vibecode.ui.display import show_agent_text
-
-BASE_SYSTEM_PROMPT = (
-    "You are VibeCode, an agentic coding assistant running in a terminal. "
-    "You have tools to read files, write files, run shell commands, and "
-    "delegate to sub-agents via Task (use subagent_type='large-file-editor' "
-    "for files over ~200 lines). The file_write tool always shows the user a "
-    "diff and asks for approval before anything is written to disk — never "
-    "try to bypass that."
-)
 
 
 @click.command()
@@ -30,9 +23,11 @@ def cli(task, model):
     chosen_model = model or DEFAULT_MODEL
     registry = build_default_registry(project_root, client=client, model=chosen_model)
     hooks = HookManager([LoggingHook(project_root), BashConfirmationHook()])
+    context = load_project_context(project_root)
+    system_prompt = build_system_prompt(context, registry.tool_names())
 
     if task:
-        result = run_agent_loop(task, registry, BASE_SYSTEM_PROMPT, client, hooks=hooks, model=chosen_model)
+        result = run_agent_loop(task, registry, system_prompt, client, hooks=hooks, model=chosen_model)
         show_agent_text(result.final_text)
         return
 
@@ -41,7 +36,7 @@ def cli(task, model):
         task = click.prompt("›").strip()
         if task.lower() in ("quit", "exit", ""):
             break
-        result = run_agent_loop(task, registry, BASE_SYSTEM_PROMPT, client, hooks=hooks, model=chosen_model)
+        result = run_agent_loop(task, registry, system_prompt, client, hooks=hooks, model=chosen_model)
         show_agent_text(result.final_text)
 
 

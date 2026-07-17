@@ -96,7 +96,7 @@ class ProjectIndexer:
         self.project_root = Path(project_root).resolve()
         self.exclude_dirs = exclude_dirs or {
             'venv', 'env', '.venv', '__pycache__', '.git',
-            'node_modules', '.pytest_cache', '.agentfs', 'vibe'
+            'node_modules', '.pytest_cache', '.agentfs', 'vibe', '.vibecode'
         }
 
     def scan_project(self) -> ProjectGraph:
