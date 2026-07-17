@@ -35,3 +35,20 @@ def read_file_content(file_path):
 
     return content
 
+
+def strip_markdown_code_blocks(text: str) -> str:
+    """
+    Remove markdown code block wrappers if present.
+
+    If text starts with ```python or ``` and ends with ```,
+    extract the code between them.
+    """
+    text = text.strip()
+
+    if text.startswith("```"):
+        first_newline = text.find('\n')
+        if first_newline != -1 and text.rstrip().endswith("```"):
+            return text[first_newline + 1:-3].rstrip()
+
+    return text
+

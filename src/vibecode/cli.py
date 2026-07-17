@@ -12,9 +12,11 @@ from vibecode.ui.display import show_agent_text
 
 BASE_SYSTEM_PROMPT = (
     "You are VibeCode, an agentic coding assistant running in a terminal. "
-    "You have tools to read files, write files, and run shell commands. "
-    "The file_write tool always shows the user a diff and asks for approval "
-    "before anything is written to disk — never try to bypass that."
+    "You have tools to read files, write files, run shell commands, and "
+    "delegate to sub-agents via Task (use subagent_type='large-file-editor' "
+    "for files over ~200 lines). The file_write tool always shows the user a "
+    "diff and asks for approval before anything is written to disk — never "
+    "try to bypass that."
 )
 
 
@@ -26,7 +28,7 @@ def cli(task, model):
     project_root = Path.cwd()
     client = get_client()
     chosen_model = model or DEFAULT_MODEL
-    registry = build_default_registry(project_root)
+    registry = build_default_registry(project_root, client=client, model=chosen_model)
     hooks = HookManager([LoggingHook(project_root), BashConfirmationHook()])
 
     if task:

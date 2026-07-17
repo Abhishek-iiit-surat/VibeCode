@@ -15,12 +15,24 @@ from vibecode.tools.registry import ToolRegistry
 WEB_SEARCH_SCHEMA = {"type": "web_search_20260209", "name": "web_search"}
 
 
-def build_default_registry(project_root: Path, extra_tools: Optional[list] = None) -> ToolRegistry:
+def build_default_registry(
+    project_root: Path,
+    client=None,
+    model: Optional[str] = None,
+    extra_tools: Optional[list] = None,
+) -> ToolRegistry:
     registry = ToolRegistry()
     registry.register(FileReadTool(project_root))
     registry.register(FileWriteTool(project_root))
     registry.register(BashTool(project_root))
     registry.register_server_tool(WEB_SEARCH_SCHEMA)
+
+    if client is not None and model is not None:
+        # Imported here (not at module top) to avoid a tools/subagents import
+        # cycle — by this point vibecode.tools.registry/.base are fully loaded.
+        from vibecode.subagents.task_tool import TaskTool
+
+        registry.register(TaskTool(registry, client, model))
 
     for tool in extra_tools or []:
         registry.register(tool)
