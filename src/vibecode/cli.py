@@ -9,6 +9,7 @@ from vibecode.context.loader import load_project_context
 from vibecode.hooks import HookManager
 from vibecode.hooks.bash_confirmation_hook import BashConfirmationHook
 from vibecode.hooks.logging_hook import LoggingHook
+from vibecode.memory.store import MemoryStore
 from vibecode.tools import build_default_registry
 from vibecode.ui.display import show_agent_text
 
@@ -23,11 +24,14 @@ def cli(task, model):
     chosen_model = model or DEFAULT_MODEL
     registry = build_default_registry(project_root, client=client, model=chosen_model)
     hooks = HookManager([LoggingHook(project_root), BashConfirmationHook()])
+    memory = MemoryStore(project_root / ".vibecode" / "memory.json")
     context = load_project_context(project_root)
     system_prompt = build_system_prompt(context, registry.tool_names())
 
     if task:
-        result = run_agent_loop(task, registry, system_prompt, client, hooks=hooks, model=chosen_model)
+        result = run_agent_loop(
+            task, registry, system_prompt, client, hooks=hooks, memory=memory, model=chosen_model
+        )
         show_agent_text(result.final_text)
         return
 
@@ -36,7 +40,9 @@ def cli(task, model):
         task = click.prompt("›").strip()
         if task.lower() in ("quit", "exit", ""):
             break
-        result = run_agent_loop(task, registry, system_prompt, client, hooks=hooks, model=chosen_model)
+        result = run_agent_loop(
+            task, registry, system_prompt, client, hooks=hooks, memory=memory, model=chosen_model
+        )
         show_agent_text(result.final_text)
 
 
