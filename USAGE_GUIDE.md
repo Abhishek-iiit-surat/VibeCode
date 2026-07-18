@@ -96,13 +96,12 @@ Two hooks are wired in by default around every tool call:
 ## Sub-Agents and the Task Tool
 
 The agent can delegate work via the `Task` tool:
-- `subagent_type="large-file-editor"` — for a single file over ~200 lines. Instead
-  of rewriting the whole file, it parses the file into AST blocks, edits just the
-  relevant chunk, merges it back, and validates the merge against a temporary copy
-  before the usual diff+approval gate.
 - `subagent_type="general-purpose"` — a nested reasoning loop with a restricted tool
-  set (`file_read`, `file_write`, `bash`, `web_search` — no further delegation, no
-  shared memory) for any other self-contained subtask.
+  set (`file_read`, `file_write`, `bash`, `search`, `web_search` — no further
+  delegation, no shared memory). Delegation is by task shape, not file size: use it
+  for open-ended exploration or a self-contained subtask so the back-and-forth stays
+  out of the main agent's context. A direct edit to an already-located file — any
+  size — should just use `file_read`/`file_write` in the current loop instead.
 
 ## Memory
 
@@ -122,7 +121,7 @@ ANTHROPIC_API_KEY=sk-ant-your-key-here
 
 ### Model
 
-Default is `claude-opus-4-8`. Override per-invocation:
+Default is `claude-sonnet-4.6`. Override per-invocation:
 
 ```bash
 python run_vibe.py --model claude-sonnet-5 "summarize the README"
@@ -147,12 +146,11 @@ You ──task──▶ Agent (Reasoning Loop) ──call──▶ Hooks ──�
 ```
 
 - `src/vibecode/agent/` — reasoning loop, Anthropic client, system prompt assembly
-- `src/vibecode/tools/` — FileRead, FileWrite, Bash (client-side) + WebSearch
-  (Anthropic server-side tool)
+- `src/vibecode/tools/` — FileRead, FileWrite, Bash, Search (glob + grep, client-side)
+  + WebSearch (Anthropic server-side tool)
 - `src/vibecode/hooks/` — pre/post tool-call interception
-- `src/vibecode/subagents/` — Task tool, generic sub-agent runner, large-file-editor
-- `src/vibecode/context/` — CLAUDE.md/skills loader, plus project indexing utilities
-  (AST analyzer, project graph, SQLite index)
+- `src/vibecode/subagents/` — Task tool, generic sub-agent runner
+- `src/vibecode/context/` — CLAUDE.md/skills loader
 - `src/vibecode/memory/` — persistent session memory with compaction
 - `src/vibecode/diff/`, `src/vibecode/ui/` — diff generation and terminal display
 

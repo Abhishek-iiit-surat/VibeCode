@@ -5,17 +5,41 @@ the loaded Context (CLAUDE.md + skills), and the available tool names.
 
 from vibecode.context.loader import ProjectContext
 
+# Tool names referenced by name in BASE_SYSTEM_PROMPT's prose. Checked against
+# the live registry in build_system_prompt so a rename/removal fails loudly
+# at startup instead of leaving the prompt silently referring to a tool that
+# no longer exists.
+PROMPT_REFERENCED_TOOLS = ["file_read", "file_write", "bash", "search"]
+
 BASE_SYSTEM_PROMPT = (
     "You are VibeCode, an agentic coding assistant running in a terminal. "
-    "You have tools to read files, write files, run shell commands, and "
-    "delegate to sub-agents via Task (use subagent_type='large-file-editor' "
-    "for files over ~200 lines). The file_write tool always shows the user a "
-    "diff and asks for approval before anything is written to disk — never "
-    "try to bypass that."
+    "Read each tool's description before calling it — approval, confirmation, "
+    "and safety behavior for each tool lives there, not here. "
+    "Delegate to sub-agents via Task for self-contained exploration or "
+    "subtasks, to keep open-ended search out of your own context — not "
+    "because a file is large. "
+    "In a large or unfamiliar codebase, search before you read: use the "
+    "search tool (glob for filenames, pattern for content) to locate the "
+    "relevant file and line range before reading whole files. "
+    "After making a code change, verify it: run the project's tests or "
+    "build if one exists (check CLAUDE.md or look for a test/build command) "
+    "before considering the task done. "
+    "If a request is ambiguous or underspecified, don't guess silently — "
+    "state the assumption you're making and proceed, or ask a clarifying "
+    "question if the ambiguity is high-stakes (e.g. could delete data or "
+    "change behavior broadly)."
 )
 
 
 def build_system_prompt(context: ProjectContext, tool_names: list) -> str:
+    missing = [name for name in PROMPT_REFERENCED_TOOLS if name not in tool_names]
+    if missing:
+        raise ValueError(
+            f"BASE_SYSTEM_PROMPT references tool(s) {missing} by name, but they "
+            f"aren't in the registry ({tool_names}). Update PROMPT_REFERENCED_TOOLS "
+            "and the prompt text together with the tool rename/removal."
+        )
+
     parts = [BASE_SYSTEM_PROMPT, f"Available tools: {', '.join(tool_names)}."]
 
     if context.claude_md:

@@ -7,8 +7,10 @@ from vibecode.tools.base import Tool, ToolResult
 class BashTool(Tool):
     name = "bash"
     description = (
-        "Run a shell command in the project root and return its exit code, stdout, "
-        "and stderr. Use it to run tests, list files, use git, etc."
+        "Runs a shell command. The user sees each command and must confirm before it"
+        "executes — you don't need to ask permission in chat first, but never word a"
+        "command to slip past that confirmation, especially for destructive or"
+        "irreversible ones (rm -rf, git push --force, git reset --hard, dropping a database)."
     )
     input_schema = {
         "type": "object",

@@ -16,7 +16,7 @@ from vibecode.ui.display import show_agent_text
 
 @click.command()
 @click.argument("task", required=False)
-@click.option("--model", default=None, help="Override the Claude model (default: claude-opus-4-8)")
+@click.option("--model", default=None, help="Override the Claude model (default: claude-sonnet-4.6)")
 def cli(task, model):
     """VibeCode: an agentic coding assistant."""
     project_root = Path.cwd()
