@@ -1,3 +1,5 @@
 click
 anthropic
 python-dotenv
+rich
+litellm==1.91.4

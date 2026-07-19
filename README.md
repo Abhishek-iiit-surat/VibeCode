@@ -16,7 +16,7 @@ persistent Memory store that auto-compacts.
 - 🪝 Hooks around every tool call — a bash-confirmation gate and a JSONL audit log
   are wired in by default
 - 🧠 Persistent memory across turns, with automatic summarize-and-trim compaction
-- 🔄 Anthropic Claude only (`claude-sonnet-4.6` by default, override with `--model`)
+- 🔄 Anthropic Claude only (`claude-sonnet-4-6` by default, override with `--model`)
 
 ## Installation
 

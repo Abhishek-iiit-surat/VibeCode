@@ -121,10 +121,10 @@ ANTHROPIC_API_KEY=sk-ant-your-key-here
 
 ### Model
 
-Default is `claude-sonnet-4.6`. Override per-invocation:
+Default is `claude-sonnet-4-6`. Override per-invocation:
 
 ```bash
-python run_vibe.py --model claude-sonnet-5 "summarize the README"
+python run_vibe.py --model claude-sonnet-4-6 "summarize the README"
 ```
 
 ---

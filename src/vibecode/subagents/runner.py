@@ -4,6 +4,9 @@ given a restricted tool set and no memory. Used by the Task tool for
 subagent_type="general-purpose".
 """
 
+from typing import Any, Optional
+
+from vibecode.agent.client import SUBAGENT_MODEL
 from vibecode.agent.loop import run_agent_loop
 from vibecode.tools.registry import ToolRegistry
 
@@ -13,14 +16,22 @@ SUBAGENT_SYSTEM_PROMPT = (
     "sees your final text response, not your intermediate steps."
 )
 
+SUBAGENT_MAX_TURNS = 10
 
-def run_subagent(prompt: str, registry: ToolRegistry, client, model: str, max_turns: int = 15) -> str:
+
+def run_subagent(
+    prompt: str,
+    registry: ToolRegistry,
+    client,
+    on_usage: Optional[Any] = None,
+) -> str:
     result = run_agent_loop(
         task=prompt,
         tools=registry,
         system_prompt=SUBAGENT_SYSTEM_PROMPT,
         client=client,
-        model=model,
-        max_turns=max_turns,
+        model=SUBAGENT_MODEL,
+        max_turns=SUBAGENT_MAX_TURNS,
+        on_usage=on_usage,
     )
     return result.final_text

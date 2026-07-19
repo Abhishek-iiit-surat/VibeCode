@@ -1,20 +1,23 @@
 """
 The Agent reasoning loop: the central piece of the architecture.
 
-Calls Claude with the current tool registry, executes any tool_use blocks
-(through hooks, if provided), feeds results back, and repeats until Claude
-stops calling tools. Standard Anthropic Messages-API manual tool-use loop.
+Calls the model (via litellm, provider-agnostic) with the current tool
+registry, executes any requested tool calls (through hooks, if provided),
+feeds results back, and repeats until the model stops calling tools.
+Standard OpenAI-style manual tool-use loop — litellm normalizes every
+provider's wire format to this shape, and normalize_response() is where
+that shape gets converted into the plain ToolCall/AgentResponse dataclasses
+the rest of this function works with.
 """
 
 from dataclasses import dataclass
 from typing import Any, Optional
 
-import anthropic
-
 from vibecode.agent.client import DEFAULT_MODEL
+from vibecode.agent.response import build_tool_result_message, normalize_response, normalize_usage
 from vibecode.tools.base import ToolResult
 from vibecode.tools.registry import ToolRegistry
-from vibecode.ui.display import show_tool_call, show_tool_result
+from vibecode.ui.display import show_tool_call, show_tool_result, thinking_status
 
 
 @dataclass
@@ -27,67 +30,76 @@ def run_agent_loop(
     task: str,
     tools: ToolRegistry,
     system_prompt: str,
-    client: anthropic.Anthropic,
+    client: Any,
     hooks: Optional[Any] = None,
     memory: Optional[Any] = None,
     model: str = DEFAULT_MODEL,
     max_tokens: int = 8192,
-    max_turns: int = 50,
+    max_turns: int = 20,
+    on_usage: Optional[Any] = None,
 ) -> AgentResult:
     messages = (memory.load() if memory else []) + [{"role": "user", "content": task}]
+    system_message = {"role": "system", "content": system_prompt}
+    tool_schemas = tools.list_schemas()
 
-    response = None
-    for _ in range(max_turns):
-        response = client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            system=system_prompt,
-            tools=tools.list_schemas(),
-            messages=messages,
-        )
-        messages.append({"role": "assistant", "content": response.content})
+    # Anthropic-only prompt-caching hint. litellm passes extra_headers /
+    # cache_control through for anthropic/* models; other providers don't
+    # understand it, so it's gated on the model prefix rather than sent
+    # unconditionally.
+    is_anthropic = model.startswith("anthropic/")
+    if is_anthropic:
+        system_message["cache_control"] = {"type": "ephemeral"}
+        if tool_schemas:
+            tool_schemas[-1] = {**tool_schemas[-1], "cache_control": {"type": "ephemeral"}}
 
-        if response.stop_reason != "tool_use":
-            break
-
-        tool_results = []
-        for block in response.content:
-            if block.type != "tool_use" or not tools.is_client_tool(block.name):
-                continue  # server-tool blocks (web_search) are already resolved in-response
-
-            tool_input = block.input
-            show_tool_call(block.name, tool_input)
-
-            if hooks is not None:
-                decision = hooks.before_tool_call(block.name, tool_input)
-                if decision.block:
-                    result = ToolResult(content=decision.reason or "Blocked by hook.", is_error=True)
-                else:
-                    result = tools.execute(block.name, decision.modified_input or tool_input)
-                    result = hooks.after_tool_call(block.name, tool_input, result) or result
-            else:
-                result = tools.execute(block.name, tool_input)
-
-            show_tool_result(result)
-
-            tool_results.append(
-                {
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": result.content,
-                    "is_error": result.is_error,
-                }
+    agent_response = None
+    with thinking_status("Thinking…") as status:
+        for _ in range(max_turns):
+            status.update("Thinking…")
+            raw_response = client.completion(
+                model=model,
+                max_tokens=max_tokens,
+                messages=[system_message] + messages,
+                tools=tool_schemas or None,
             )
+            agent_response = normalize_response(raw_response)
 
-        messages.append({"role": "user", "content": tool_results})
+            if on_usage is not None:
+                on_usage(model, normalize_usage(getattr(raw_response, "usage", None)))
 
-        if memory:
-            memory.save(messages)
-            if memory.should_compact(messages):
-                messages = memory.compact(messages, client, model)
+            messages.append(agent_response.raw_assistant_message)
 
-    final_text = ""
-    if response is not None:
-        final_text = next((b.text for b in response.content if b.type == "text"), "")
+            if agent_response.stop_reason != "tool_use":
+                break
+
+            for tool_call in agent_response.tool_calls:
+                if not tools.is_client_tool(tool_call.name):
+                    continue
+
+                tool_input = tool_call.input
+                status.stop()
+                show_tool_call(tool_call.name, tool_input)
+
+                if hooks is not None:
+                    decision = hooks.before_tool_call(tool_call.name, tool_input)
+                    if decision.block:
+                        result = ToolResult(content=decision.reason or "Blocked by hook.", is_error=True)
+                    else:
+                        result = tools.execute(tool_call.name, decision.modified_input or tool_input)
+                        result = hooks.after_tool_call(tool_call.name, tool_input, result) or result
+                else:
+                    result = tools.execute(tool_call.name, tool_input)
+
+                show_tool_result(result)
+                status.start()
+
+                messages.append(build_tool_result_message(tool_call.id, result.content, result.is_error))
+
+            if memory:
+                memory.save(messages)
+                if memory.should_compact(messages):
+                    messages = memory.compact(messages, client, model)
+
+    final_text = agent_response.text if agent_response is not None else ""
 
     return AgentResult(messages=messages, final_text=final_text)

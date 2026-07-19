@@ -8,10 +8,8 @@ from vibecode.ui.display import get_approval, show_diff
 class FileWriteTool(Tool):
     name = "file_write"
     description = (
-        "Write the complete new content of a file at the given path (relative to the "
-        "project root, or absolute). Always pass the full desired file content, not a "
-        "partial edit. Shows a unified diff against the current content and asks the "
-        "user for approval before anything is written to disk."
+        "Writes content to a file. Always shows the user a diff and requires approval"
+        "before anything is written to disk. Never attempt to bypass that."       
     )
     input_schema = {
         "type": "object",

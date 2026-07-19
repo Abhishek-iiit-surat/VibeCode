@@ -54,16 +54,19 @@ class MemoryStore:
         to_summarize = _to_plain(messages[:-keep_recent])
         recent = _to_plain(messages[-keep_recent:])
 
-        response = client.messages.create(
+        response = client.completion(
             model=model,
             max_tokens=1024,
-            system="Summarize this conversation history concisely, preserving any "
-                   "decisions, file paths, and unfinished work a continuation would need.",
             messages=[
+                {
+                    "role": "system",
+                    "content": "Summarize this conversation history concisely, preserving any "
+                               "decisions, file paths, and unfinished work a continuation would need.",
+                },
                 {"role": "user", "content": json.dumps(to_summarize)},
             ],
         )
-        summary_text = next((b.text for b in response.content if b.type == "text"), "")
+        summary_text = response.choices[0].message.content or ""
 
         compacted = [{"role": "user", "content": f"[Earlier conversation summary]\n{summary_text}"}]
         compacted.extend(recent)

@@ -11,11 +11,13 @@ in the current loop — spawning a sub-agent for it adds a round trip for
 nothing.
 """
 
+from typing import Any, Optional
+
 from vibecode.subagents.runner import run_subagent
 from vibecode.tools.base import Tool, ToolResult
 from vibecode.tools.registry import ToolRegistry
 
-GENERAL_PURPOSE_TOOLS = ["file_read", "file_write", "bash", "search", "web_search"]
+GENERAL_PURPOSE_TOOLS = ["file_read", "file_write", "bash", "search"]
 
 
 class TaskTool(Tool):
@@ -43,15 +45,15 @@ class TaskTool(Tool):
         "required": ["description", "prompt", "subagent_type"],
     }
 
-    def __init__(self, registry: ToolRegistry, client, model: str):
+    def __init__(self, registry: ToolRegistry, client, on_usage: Optional[Any] = None):
         self.registry = registry
         self.client = client
-        self.model = model
+        self.on_usage = on_usage
 
     def execute(self, description, prompt, subagent_type) -> ToolResult:
         if subagent_type == "general-purpose":
             subset = self.registry.subset(GENERAL_PURPOSE_TOOLS)
-            text = run_subagent(prompt, subset, self.client, self.model)
+            text = run_subagent(prompt, subset, self.client, on_usage=self.on_usage)
             return ToolResult(content=text)
 
         return ToolResult(content=f"Unknown subagent_type: {subagent_type}", is_error=True)

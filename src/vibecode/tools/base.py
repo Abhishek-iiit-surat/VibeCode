@@ -30,10 +30,15 @@ class Tool(ABC):
         """Run the tool with the arguments Claude provided and return the result."""
         raise NotImplementedError
 
-    def to_anthropic_schema(self) -> dict:
-        """The dict Claude's Messages API expects in the `tools` list."""
+    def to_openai_schema(self) -> dict:
+        """The dict shape litellm.completion()'s `tools` list expects — the
+        OpenAI function-calling wrapper. litellm translates this into
+        whatever the target provider (Anthropic, OpenAI, ...) needs."""
         return {
-            "name": self.name,
-            "description": self.description,
-            "input_schema": self.input_schema,
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": self.input_schema,
+            },
         }
