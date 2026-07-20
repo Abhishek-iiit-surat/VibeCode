@@ -7,7 +7,8 @@ class FileReadTool(Tool):
     name = "file_read"
     description = (
         "Read the contents of a file, given a path relative to the project root "
-        "(or an absolute path). Returns the content with 1-indexed line numbers."
+        "or an absolute path anywhere on disk (not limited to the project). "
+        "Returns the content with 1-indexed line numbers."
     )
     input_schema = {
         "type": "object",

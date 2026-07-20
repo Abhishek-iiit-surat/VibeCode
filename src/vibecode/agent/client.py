@@ -20,11 +20,11 @@ load_dotenv()
 # LiteLLM model identifiers: "<provider>/<model>". Swapping DEFAULT_MODEL
 # to an "openai/..." id is the whole story for switching providers — no
 # other code names a provider explicitly.
-DEFAULT_MODEL = "anthropic/claude-sonnet-4-6"
+DEFAULT_MODEL = "openai/gpt-5.4-mini"
 # Sub-agents always run on this model regardless of what the main agent uses —
 # delegated subtasks are narrower in scope, so the cheaper/faster model is the
 # right default rather than inheriting the parent's model.
-SUBAGENT_MODEL = "anthropic/claude-haiku-4-5"
+SUBAGENT_MODEL = "openai/gpt-4.1-mini"
 
 
 def get_client():

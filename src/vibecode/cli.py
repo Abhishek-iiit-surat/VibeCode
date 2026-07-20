@@ -10,7 +10,7 @@ from vibecode.hooks import HookManager
 from vibecode.hooks.bash_confirmation_hook import BashConfirmationHook
 from vibecode.hooks.logging_hook import LoggingHook
 from vibecode.hooks.pricing_hook import PricingTracker
-from vibecode.memory.store import MemoryStore
+from vibecode.memory.mem0_store import Mem0Store
 from vibecode.tools import build_default_registry
 from vibecode.ui.display import show_agent_text, show_banner, show_cost, prompt_task
 
@@ -35,7 +35,7 @@ def cli(task, model):
         project_root, client=client, model=chosen_model, on_usage=pricing.on_usage
     )
     hooks = HookManager([LoggingHook(project_root), BashConfirmationHook()])
-    memory = MemoryStore(project_root / ".vibecode" / "memory.json")
+    memory = Mem0Store(project_root)
     context = load_project_context(project_root)
     system_prompt = build_system_prompt(context, registry.tool_names())
 

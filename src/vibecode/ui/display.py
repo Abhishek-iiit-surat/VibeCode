@@ -17,8 +17,8 @@ from rich.text import Text
 
 console = Console()
 
-_SPINNER = "dots"
-_ACCENT = "#6633cb"  # warm coral, evokes Claude Code's status color
+_SPINNER = "star"
+_ACCENT = "#E8840A"  # warm coral, evokes Claude Code's status color
 
 
 def show_banner():
@@ -96,10 +96,26 @@ def show_tool_call(name: str, tool_input: dict):
 
 
 def show_tool_result(result):
-    """Display the result of a tool call."""
+    """Display the result of a tool call, capped to a max height."""
     style = "red" if result.is_error else "bright_black"
     prefix = "✗" if result.is_error else "└─"
-    console.print(f"  {prefix} {result.content}", style=style)
+    console.print(f"  {prefix} {_truncate(result.content)}", style=style)
+
+
+_MAX_LINES = 10
+_MAX_LINE_LEN = 200
+
+
+def _truncate(text: str, max_lines: int = _MAX_LINES) -> str:
+    """Shared height/width cap for anything that echoes tool/file content
+    to the terminal — long lines and long outputs both get clipped with a
+    '…' marker so nothing scrolls the query itself off-screen."""
+    lines = [ln if len(ln) <= _MAX_LINE_LEN else ln[: _MAX_LINE_LEN - 1] + "…" for ln in text.splitlines()]
+    if len(lines) <= max_lines:
+        return "\n".join(lines)
+    hidden = len(lines) - max_lines
+    shown = "\n".join(lines[:max_lines])
+    return f"{shown}\n  … +{hidden} more line{'s' if hidden != 1 else ''} (truncated)"
 
 
 def show_cost(summary: str):
@@ -107,6 +123,6 @@ def show_cost(summary: str):
     console.print(Text(summary, style="dim"))
 
 
-def _format_input(tool_input: dict, max_len: int = 80) -> str:
+def _format_input(tool_input: dict) -> str:
     text = ", ".join(f"{k}={v!r}" for k, v in tool_input.items())
-    return text if len(text) <= max_len else text[: max_len - 1] + "…"
+    return _truncate(text, max_lines=1)

@@ -105,10 +105,13 @@ The agent can delegate work via the `Task` tool:
 
 ## Memory
 
-`.vibecode/memory.json` holds the conversation across turns in a session. Once the
-serialized history passes a size threshold, the oldest messages are summarized in
-one extra Claude call and replaced with a single summary entry, keeping the most
-recent messages verbatim — so long-running sessions don't grow unbounded.
+Backed by [mem0](https://github.com/mem0ai/mem0), local/self-hosted (no mem0.ai
+account needed). Facts are extracted from each finished query and stored as
+discrete entries in a local Qdrant index at `.vibecode/mem0_qdrant/`; the next
+query searches that index for entries relevant to its own task and only pulls
+those in, rather than replaying the full history. Requires `OPENAI_API_KEY` for
+embeddings (`text-embedding-3-small`) regardless of which model the agent itself
+is running on.
 
 ## Configuration
 
@@ -141,8 +144,8 @@ You ──task──▶ Agent (Reasoning Loop) ──call──▶ Hooks ──�
       on startup  │             read/write
                   ▼             context
               Context ◀──────────────────────▶ Memory
-          (CLAUDE.md, skills/)          (.vibecode/memory.json,
-                                          auto-compacts when full)
+          (CLAUDE.md, skills/)          (mem0, local Qdrant index
+                                          at .vibecode/mem0_qdrant/)
 ```
 
 - `src/vibecode/agent/` — reasoning loop, Anthropic client, system prompt assembly

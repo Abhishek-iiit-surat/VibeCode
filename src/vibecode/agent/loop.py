@@ -38,7 +38,7 @@ def run_agent_loop(
     max_turns: int = 20,
     on_usage: Optional[Any] = None,
 ) -> AgentResult:
-    messages = (memory.load() if memory else []) + [{"role": "user", "content": task}]
+    messages = (memory.load(task) if memory else []) + [{"role": "user", "content": task}]
     system_message = {"role": "system", "content": system_prompt}
     tool_schemas = tools.list_schemas()
 
@@ -95,11 +95,9 @@ def run_agent_loop(
 
                 messages.append(build_tool_result_message(tool_call.id, result.content, result.is_error))
 
-            if memory:
-                memory.save(messages)
-                if memory.should_compact(messages):
-                    messages = memory.compact(messages, client, model)
-
     final_text = agent_response.text if agent_response is not None else ""
+
+    if memory:
+        memory.finalize(messages, client, model)
 
     return AgentResult(messages=messages, final_text=final_text)

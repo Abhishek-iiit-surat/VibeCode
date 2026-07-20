@@ -14,7 +14,7 @@ interception, Sub-Agents for delegated work, Context loaded from this file plus
 - `src/vibecode/subagents/` — the Task tool and a generic sub-agent runner
   (subagent_type='general-purpose' only)
 - `src/vibecode/context/` — the CLAUDE.md/skills loader
-- `src/vibecode/memory/` — persistent session memory with compaction
+- `src/vibecode/memory/` — mem0-backed selective recall (local Qdrant index)
 - `src/vibecode/diff/`, `src/vibecode/ui/` — diff generation and terminal display
 
 ## Conventions
