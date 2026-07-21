@@ -12,6 +12,8 @@ from vibecode.tools.file_read import FileReadTool
 from vibecode.tools.file_write import FileWriteTool
 from vibecode.tools.registry import ToolRegistry
 from vibecode.tools.search import SearchTool
+from vibecode.tools.web_fetch import WebFetchTool
+from vibecode.tools.web_search import WebSearchTool
 
 
 def build_default_registry(
@@ -26,6 +28,8 @@ def build_default_registry(
     registry.register(FileWriteTool(project_root))
     registry.register(BashTool(project_root))
     registry.register(SearchTool(project_root))
+    registry.register(WebSearchTool())
+    registry.register(WebFetchTool())
 
     if client is not None and model is not None:
         # Imported here (not at module top) to avoid a tools/subagents import

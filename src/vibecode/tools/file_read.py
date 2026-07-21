@@ -33,7 +33,12 @@ class FileReadTool(Tool):
             return ToolResult(content=f"Not a file: {path}", is_error=True)
 
         try:
-            content = file_path.read_text()
+            # Force UTF-8 instead of the platform default (cp1252 on Windows),
+            # which raises on bytes outside it; fall back to latin-1 (never raises).
+            try:
+                content = file_path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                content = file_path.read_text(encoding="latin-1")
         except Exception as e:
             return ToolResult(content=f"Failed to read {path}: {e}", is_error=True)
 

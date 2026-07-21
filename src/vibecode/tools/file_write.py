@@ -5,6 +5,15 @@ from vibecode.tools.base import Tool, ToolResult
 from vibecode.ui.display import get_approval, show_diff
 
 
+def _read_existing(file_path: Path) -> str:
+    # Force UTF-8 instead of the platform default (cp1252 on Windows),
+    # which raises on bytes outside it; fall back to latin-1 (never raises).
+    try:
+        return file_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return file_path.read_text(encoding="latin-1")
+
+
 class FileWriteTool(Tool):
     name = "file_write"
     description = (
@@ -29,7 +38,7 @@ class FileWriteTool(Tool):
 
     def execute(self, path: str, content: str) -> ToolResult:
         file_path = self._resolve(path)
-        original = file_path.read_text() if file_path.exists() else ""
+        original = _read_existing(file_path) if file_path.exists() else ""
 
         diff = generate_diff(original, content, path)
         if not diff:
@@ -50,5 +59,5 @@ class FileWriteTool(Tool):
             )
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.write_text(content)
+        file_path.write_text(content, encoding="utf-8")
         return ToolResult(content=f"Wrote {path}.")

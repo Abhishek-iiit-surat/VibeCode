@@ -16,6 +16,16 @@ SUBAGENT_SYSTEM_PROMPT = (
     "sees your final text response, not your intermediate steps."
 )
 
+RESEARCHER_SYSTEM_PROMPT = (
+    "You are a focused research sub-agent delegated a natural-language "
+    "question. Use web_search to find candidate pages, judge from the "
+    "titles/snippets which ones are actually likely to answer the question, "
+    "then use web_fetch on those (not every result) to read their full "
+    "content. Report back only the distilled answer — facts, figures, and "
+    "quotes relevant to the question — not raw page content or your search "
+    "process. The parent agent only sees your final text response."
+)
+
 SUBAGENT_MAX_TURNS = 10
 
 
@@ -24,11 +34,12 @@ def run_subagent(
     registry: ToolRegistry,
     client,
     on_usage: Optional[Any] = None,
+    system_prompt: str = SUBAGENT_SYSTEM_PROMPT,
 ) -> str:
     result = run_agent_loop(
         task=prompt,
         tools=registry,
-        system_prompt=SUBAGENT_SYSTEM_PROMPT,
+        system_prompt=system_prompt,
         client=client,
         model=SUBAGENT_MODEL,
         max_turns=SUBAGENT_MAX_TURNS,

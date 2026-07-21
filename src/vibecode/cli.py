@@ -11,8 +11,16 @@ from vibecode.hooks.bash_confirmation_hook import BashConfirmationHook
 from vibecode.hooks.logging_hook import LoggingHook
 from vibecode.hooks.pricing_hook import PricingTracker
 from vibecode.memory.mem0_store import Mem0Store
+from vibecode.memory.session_store import SessionStore
 from vibecode.tools import build_default_registry
-from vibecode.ui.display import show_agent_text, show_banner, show_cost, prompt_task
+from vibecode.ui.display import (
+    confirm_clear_memory,
+    prompt_task,
+    show_agent_text,
+    show_banner,
+    show_cost,
+    show_memory_cleared,
+)
 
 MAIN_AGENT_MAX_TURNS = 20
 
@@ -36,33 +44,43 @@ def cli(task, model):
     )
     hooks = HookManager([LoggingHook(project_root), BashConfirmationHook()])
     memory = Mem0Store(project_root)
+    session = SessionStore(project_root)
     context = load_project_context(project_root)
     system_prompt = build_system_prompt(context, registry.tool_names())
 
     show_banner()
     first_task = task
-    while True:
-        if first_task is not None:
-            task = first_task
-            first_task = None
-        else:
-            task = prompt_task()
-        if task.lower() in ("quit", "exit", ""):
-            break
-        pricing.reset()
-        result = run_agent_loop(
-            task,
-            registry,
-            system_prompt,
-            client,
-            hooks=hooks,
-            memory=memory,
-            model=chosen_model,
-            max_turns=MAIN_AGENT_MAX_TURNS,
-            on_usage=pricing.on_usage,
-        )
-        show_agent_text(result.final_text)
-        show_cost(pricing.summary())
+    try:
+        while True:
+            if first_task is not None:
+                task = first_task
+                first_task = None
+            else:
+                task = prompt_task()
+            if task.lower() in ("quit", "exit", ""):
+                break
+            if task.lower() in ("/clear", "/clear-memory"):
+                if confirm_clear_memory():
+                    memory.clear()
+                    show_memory_cleared()
+                continue
+            pricing.reset()
+            result = run_agent_loop(
+                task,
+                registry,
+                system_prompt,
+                client,
+                hooks=hooks,
+                memory=memory,
+                model=chosen_model,
+                max_turns=MAIN_AGENT_MAX_TURNS,
+                on_usage=pricing.on_usage,
+            )
+            show_agent_text(result.final_text)
+            show_cost(pricing.summary())
+            session.record(task, result.final_text)
+    finally:
+        session.save(client, chosen_model, memory=memory)
 
 
 if __name__ == "__main__":

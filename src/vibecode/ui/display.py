@@ -25,7 +25,7 @@ def show_banner():
     """Startup banner for interactive mode."""
     console.print()
     console.print(Text("VibeCode", style=f"bold {_ACCENT}"), Text(" — agentic coding assistant", style="dim"))
-    console.print(Text("Describe a task, or 'quit' to exit.", style="dim"))
+    console.print(Text("Describe a task, '/clear' to wipe memory, or 'quit' to exit.", style="dim"))
     console.print()
 
 
@@ -33,6 +33,18 @@ def prompt_task() -> str:
     """Read the next task from the user with a styled prompt."""
     console.print(Text("›", style=f"bold {_ACCENT}"), end=" ")
     return console.input().strip()
+
+
+def confirm_clear_memory() -> bool:
+    """Ask the user to confirm wiping all stored memory. Returns True to proceed."""
+    choice = console.input(
+        "[bold]This will permanently delete all stored memory.[/bold] Continue? [green]y[/green]/[red]N[/red] "
+    ).strip().lower()
+    return choice == "y"
+
+
+def show_memory_cleared():
+    console.print(Text("Memory cleared.", style=_ACCENT))
 
 
 @contextmanager
