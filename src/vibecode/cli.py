@@ -1,7 +1,5 @@
 from pathlib import Path
-
 import click
-
 from vibecode.agent.client import DEFAULT_MODEL, get_client
 from vibecode.agent.loop import run_agent_loop
 from vibecode.agent.system_prompt import build_system_prompt
@@ -33,11 +31,11 @@ MAIN_AGENT_MAX_TURNS = 20
     help="Override the model, as a litellm id, e.g. 'anthropic/claude-sonnet-4-6' "
     "or 'openai/gpt-4.1' (default: anthropic/claude-sonnet-4-6)",
 )
-def cli(task, model):
+def cli(task):
     """VibeCode: an agentic coding assistant."""
     project_root = Path.cwd()
     client = get_client()
-    chosen_model = model or DEFAULT_MODEL
+    chosen_model = DEFAULT_MODEL
     pricing = PricingTracker()
     registry = build_default_registry(
         project_root, client=client, model=chosen_model, on_usage=pricing.on_usage
