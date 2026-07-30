@@ -20,7 +20,7 @@ TIMEOUT_SECONDS = 10
 MAX_CHARS = 20_000
 # markdownify's `strip` only drops the tag, not its text content, so
 # <script>/<style>/<svg> bodies would otherwise leak raw JS/CSS/markup into
-# the "readable" output — remove those elements outright before converting.
+# the "readable" output — remove those element outright before converting.
 DROP_TAGS = ["script", "style", "svg", "noscript", "template"]
 
 
