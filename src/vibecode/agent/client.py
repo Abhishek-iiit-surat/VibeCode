@@ -22,7 +22,7 @@ SUBAGENT_MODEL = "openai/gpt-4.1-mini"
 
 def get_client():
     """Validate credentials are present and return the litellm module as the
-    shared `client` value passed through the rest of the app."""
+    shared `client` value passed through the rest of the app"""
     if not os.getenv("ANTHROPIC_API_KEY") and not os.getenv("OPENAI_API_KEY"):
         raise RuntimeError(
             "No provider API key set."
