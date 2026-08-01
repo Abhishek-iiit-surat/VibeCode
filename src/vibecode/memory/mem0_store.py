@@ -12,7 +12,7 @@ Local/self-hosted mem0 (the `Memory` class, not `MemoryClient`) — no mem0.ai
 account or API key needed. Still calls OpenAI for embeddings (text-embedding-3-small)
 regardless of which model the agent itself is using, since that's the only
 embedder configured below; OPENAI_API_KEY must be set for that reason alone
-even on an Anthropic-model run.
+even on an Anthropic-model run
 """
 
 import os
